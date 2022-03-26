@@ -596,7 +596,7 @@ void thread_sleep(int64_t ticks)
   old_level = intr_disable();
   t = thread_current();
 
-  ASSERT(t != idle_thread);
+  //ASSERT(t != idle_thread);
 
   t -> wakeup_tick = ticks;
   list_push_back(&block_list, &t->elem);
