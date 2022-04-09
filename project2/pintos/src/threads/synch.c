@@ -203,18 +203,29 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-  /********* project2 ********/
+  /********* project2 with Advanced Scheduler ********/
   struct thread *cur = thread_current ();
-  if (lock->holder)
+  if(thread_mlfqs)
   {
-    cur->waiting_lock = lock;
-    list_insert_ordered (&lock->holder->donations, &cur->donation_elem, &max_priority_donation, NULL);
-    donate_priority ();
+    sema_down (&lock->semaphore);
+    cur->waiting_lock = NULL;
+    lock->holder = thread_current ();
+    return ;
   }
- 
-  sema_down (&lock->semaphore);
-  cur->waiting_lock = NULL;
-  lock->holder = thread_current ();
+
+  else
+  {
+    if (lock->holder)
+    {
+      cur->waiting_lock = lock;
+      list_insert_ordered (&lock->holder->donations, &cur->donation_elem, &max_priority_donation, NULL);
+      donate_priority ();
+    }
+    sema_down (&lock->semaphore);
+    cur->waiting_lock = NULL;
+    lock->holder = thread_current ();
+    return ;
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -247,12 +258,20 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  /********* project2 with Advanced Scheduler ********/
+  if (thread_mlfqs) {
+    lock->holder = NULL;
+    sema_up (&lock->semaphore);
+    return ;
+  }
+  else
+  {
+    remove_lock(lock);
+    refresh_priority();
 
-  remove_lock(lock);
-  refresh_priority();
-
-  lock->holder = NULL;
-  sema_up (&lock->semaphore);
+    lock->holder = NULL;
+    sema_up (&lock->semaphore);
+  }
 }
 
 /* Returns true if the current thread holds LOCK, false
