@@ -89,18 +89,9 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    int64_t wakeup_tick;		/* store wake tick */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    /******* project2 *******/
-    int original_priority;
-    struct lock *waiting_lock;
-    struct list donations;
-    struct list_elem donation_elem;
-    /******** Advanced Scheduler ********/
-    int nice;
-    int recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -142,28 +133,9 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
-/******** Advanced Scheduler ********/
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
-/******** Project1, 2********/
-void thread_sleep(int64_t ticks);
-void thread_awake(int64_t ticks);
-bool max_priority(struct list_elem *a, struct list_elem *b, void *aux UNUSED);
-void thread_preemption();
-void refresh_priority (void);
-void remove_lock (struct lock *lock);
-void donate_priority (void);
-
-/******** Advanced Scheduler ********/
-void mlfqs_priority (struct thread *t);
-void mlfqs_recent_cpu (struct thread *t);
-void mlfqs_load_avg (void);
-void mlfqs_increment (void);
-void mlfqs_recalc (void);
-void mlfqs_recalp (void)
-
 
 #endif /* threads/thread.h */

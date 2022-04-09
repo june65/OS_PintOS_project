@@ -98,6 +98,9 @@ struct thread
     struct lock *waiting_lock;
     struct list donations;
     struct list_elem donation_elem;
+    /******** Advanced Scheduler ********/
+    int nice;
+    int recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -139,6 +142,7 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
+/******** Advanced Scheduler ********/
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
@@ -152,5 +156,14 @@ void thread_preemption();
 void refresh_priority (void);
 void remove_lock (struct lock *lock);
 void donate_priority (void);
+
+/******** Advanced Scheduler ********/
+void mlfqs_priority (struct thread *t);
+void mlfqs_recent_cpu (struct thread *t);
+void mlfqs_load_avg (void);
+void mlfqs_increment (void);
+void mlfqs_recalc (void);
+void mlfqs_recalp (void);
+
 
 #endif /* threads/thread.h */
