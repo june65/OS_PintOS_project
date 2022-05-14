@@ -25,11 +25,19 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
+
+void parse_filename(char *src, char *dest) {
+  int i;
+  strlcpy(dest, src, strlen(src) + 1);
+  for (i=0; dest[i]!='\0' && dest[i] != ' '; i++);
+  dest[i] = '\0';
+}
+
 tid_t
 process_execute (const char *file_name)
 {
   char *fn_copy;
-  char *token, *save_ptr;
+  char save_ptr[256];
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -38,9 +46,12 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  token = strtok_r(file_name, " ", &save_ptr);
+  parse_filename(file_name, save_ptr);
+  if (filesys_open(save_ptr) == NULL) {
+    return -1;
+  }
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (save_ptr, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -112,15 +123,13 @@ process_wait (tid_t child_tid)
   struct thread* cur = thread_current();
   struct thread* cur_thread = NULL;
   struct list_elem* temp = NULL;
-  //printf("A\n\n");
   for(temp = list_begin(&cur->child); temp != list_end(&cur->child); temp = list_next(temp)) {
     cur_thread = list_entry(temp, struct thread, child_elem);
-    printf("A\n\n");
     if (child_tid == cur_thread->tid) {
-      sema_down(&(cur_thread -> mem_lock));
+      sema_down(&(cur_thread -> child_lock));
       exit_status = cur_thread -> exit_status;
       list_remove(&(cur_thread->child_elem));
-      sema_up(&(cur_thread->child_lock));
+      sema_up(&(cur_thread-> mem_lock));
       return exit_status;
     }
   }
@@ -150,8 +159,8 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
-  sema_up(&(cur->mem_lock));
-  sema_down(&(cur->child_lock));
+  sema_up(&(cur->child_lock));
+  sema_down(&(cur->mem_lock));
 }
 
 /* Sets up the CPU for running user code in the current

@@ -25,11 +25,19 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
+
+void parse_filename(char *src, char *dest) {
+  int i;
+  strlcpy(dest, src, strlen(src) + 1);
+  for (i=0; dest[i]!='\0' && dest[i] != ' '; i++);
+  dest[i] = '\0';
+}
+
 tid_t
 process_execute (const char *file_name)
 {
   char *fn_copy;
-  char *token, *save_ptr;
+  char save_ptr[256];
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -38,9 +46,12 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  token = strtok_r(file_name, " ", &save_ptr);
+  parse_filename(file_name, save_ptr);
+  if (filesys_open(save_ptr) == NULL) {
+    return -1;
+  }
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (save_ptr, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -115,10 +126,10 @@ process_wait (tid_t child_tid)
   for(temp = list_begin(&cur->child); temp != list_end(&cur->child); temp = list_next(temp)) {
     cur_thread = list_entry(temp, struct thread, child_elem);
     if (child_tid == cur_thread->tid) {
-      sema_down(&(cur_thread -> mem_lock));
+      sema_down(&(cur_thread -> child_lock));
       exit_status = cur_thread -> exit_status;
       list_remove(&(cur_thread->child_elem));
-      sema_up(&(cur_thread->child_lock));
+      sema_up(&(cur_thread-> mem_lock));
       return exit_status;
     }
   }
@@ -134,6 +145,15 @@ process_exit (void)
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+  int i;
+  for(i = cur->cur_fd-1; i >= 2; i--) {
+    if (cur->fd[i] != NULL) {
+      process_close_file(i);
+    }
+  }
+  cur->cur_fd = 2;
+
+
   pd = cur->pagedir;
   if (pd != NULL) 
     {
@@ -148,8 +168,8 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
-  sema_up(&(cur->mem_lock));
-  sema_down(&(cur->child_lock));
+  sema_up(&(cur->child_lock));
+  sema_down(&(cur->mem_lock));
 }
 
 /* Sets up the CPU for running user code in the current
@@ -532,4 +552,21 @@ void put_argv_in_stack(char **argv, int argc, void **esp) {
 
   *esp = *esp-4;
   **(uint32_t**)esp = 0;
+}
+
+void process_close_file(int i) {
+  struct thread * cur = thread_current();
+  file_close(cur->fd[i]);
+  cur->fd[i] = NULL;
+}
+
+struct file *process_get_file(int i) {
+  struct thread * cur = thread_current();
+  return cur->fd[i];
+}
+
+int process_add_file(struct file *f) {
+  struct thread *cur = thread_current();
+  cur->fd[cur->cur_fd] = f;
+  return cur->cur_fd++;
 }

@@ -204,6 +204,11 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  t->cur_fd = 2;
+  for (i = 0; i < 130; i++) {
+    t->fd[i] = NULL;
+  }
+
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -474,19 +479,16 @@ init_thread (struct thread *t, const char *name, int priority)
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
 
-// MYCODE_START
 #ifdef USERPROG
   for (i=0; i<128; i++)
     t->fd[i] = NULL;
   t->parent = running_thread();
   sema_init (&t->child_lock, 0);
-  sema_init (&t->memory_lock, 0);
+  sema_init (&t->mem_lock, 0);
   sema_init (&t->load_lock, 0);
-  list_init (&(t->children));
-  list_push_back (&(running_thread()->children), &(t->child_elem));
-
+  list_init (&(t->child));
+  list_push_back (&(running_thread()->child), &(t->child_elem));
 #endif
-// MYCODE_END
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

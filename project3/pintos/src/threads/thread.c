@@ -177,6 +177,7 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
+  int i;
 
   ASSERT (function != NULL);
 
@@ -203,6 +204,11 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
+
+  t->cur_fd = 2;
+  for (i = 0; i < 130; i++) {
+    t->fd[i] = NULL;
+  }
 
   /* Add to run queue. */
   thread_unblock (t);
