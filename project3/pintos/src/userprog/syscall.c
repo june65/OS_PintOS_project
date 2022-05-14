@@ -5,6 +5,10 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+#include "devices/shutdown.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
+
 static void syscall_handler (struct intr_frame *);
 void argument_to_kernel (void *esp, int *argv, int argc);
 
@@ -35,8 +39,12 @@ syscall_handler (struct intr_frame *f UNUSED)
       f -> eax = wait((int)argv[0]);
       break;
     case SYS_CREATE:
+      argument_to_kernel(f->esp,argv,2);		
+      f->eax = create((const char*)argv[0],(unsigned)argv[1]);
       break;
     case SYS_REMOVE:
+      argument_to_kernel(f->esp,argv,1);
+      f->eax = remove((const char*)argv[0]);
       break;
     case SYS_OPEN:
       break;
@@ -98,6 +106,15 @@ int write (int fd, const void *buffer, unsigned size) {
   }
   return -1; 
 }
+
+bool create(const char *file, unsigned initial_size) {
+  return filesys_create (file,initial_size);
+}
+
+bool remove(const char *file) {
+  return filesys_remove(file);
+}
+
 void is_valid_address(void *addr)
 {
   if(!is_user_vaddr(addr))
