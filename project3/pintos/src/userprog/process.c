@@ -38,6 +38,8 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   char save_ptr[256];
+  struct list_elem* elem;
+  struct thread* thr;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -52,8 +54,16 @@ process_execute (const char *file_name)
   }
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (save_ptr, PRI_DEFAULT, start_process, fn_copy);
+  sema_down(&thread_current()->load_lock);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (fn_copy);
+
+  for (elem = list_begin(&thread_current()->child); elem != list_end(&thread_current()->child); elem = list_next(elem)) {
+    thr = list_entry(elem, struct thread, child_elem);
+      if (thr->flag == 1) {
+        return process_wait(tid);
+      }
+  } 
   return tid;
 }
 
@@ -89,8 +99,11 @@ start_process (void *file_name_)
   
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit ();
+  sema_up(&thread_current()->parent->load_lock);
+  if (!success) {
+    thread_current()->flag = 1;
+    exit(-1);
+  }
   put_argv_in_stack(argv,argc,&if_.esp);
   free(s);
 

@@ -206,7 +206,7 @@ thread_create (const char *name, int priority,
   sf->ebp = 0;
 
   t->cur_fd = 2;
-  for (i = 0; i < 130; i++) {
+  for (i = 0; i < 128; i++) {
     t->fd[i] = NULL;
   }
 
@@ -488,6 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   sema_init (&t->mem_lock, 0);
   sema_init (&t->load_lock, 0);
   list_init (&(t->child));
+  t->flag = 0;
   list_push_back (&(running_thread()->child), &(t->child_elem));
 #endif
 }

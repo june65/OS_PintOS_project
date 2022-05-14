@@ -105,7 +105,8 @@ struct thread
     struct semaphore mem_lock;
     struct semaphore load_lock;
     int exit_status;
-    struct file *fd[130];
+    struct file *fd[128];
+    int flag;
     int cur_fd;
 #endif
 
