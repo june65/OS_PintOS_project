@@ -15,7 +15,7 @@ struct file
     bool deny_write;            /* Has file_deny_write() been called? */
   };
 static void syscall_handler (struct intr_frame *);
-void check_user_vaddr(const void *vaddr);
+struct vm_entry *check_user_vaddr(const void *vaddr);
 struct lock filesys_lock;
 
 struct vm_entry *check_user_vaddr(const void *vaddr) {
@@ -30,7 +30,7 @@ void valid_buffer(void *buffer, unsigned size, void *esp, bool to_write) {
   void *p = pg_round_down(buffer);
   while(p < buffer+size) {
     struct vm_entry *v = check_user_vaddr(p);
-    if(v == NULL || !v->valid_write) {
+    if(v == NULL || !(v->valid_write)) {
       exit(-1);
     }
     p += PGSIZE;
@@ -40,7 +40,11 @@ void valid_buffer(void *buffer, unsigned size, void *esp, bool to_write) {
 void valid_string(const void *str) {
   void *p = pg_round_down(str);
   struct vm_entry *v = check_user_vaddr(str);
-  int str_len = strlen(str);
+  int str_len = 0;
+  while(((char *)str)[size] != '\0') {
+    str_len++;
+  }
+
   if(v == NULL) {
     exit(-1);
   }
@@ -49,6 +53,7 @@ void valid_string(const void *str) {
     if(v == NULL) {
       exit(-1);
     }
+    p += PGSIZE;
   }    
 }
 
@@ -71,24 +76,27 @@ syscall_handler (struct intr_frame *f UNUSED)
       exit(*(uint32_t *)(f->esp + 4));
       break;
     case SYS_EXEC:
-      check_user_vaddr(f->esp + 4);
+      // check_user_vaddr(f->esp + 4);
+      valid_string(f->esp + 4);
       f->eax = exec((const char *)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_WAIT:
       f-> eax = wait((pid_t)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_CREATE:
-      check_user_vaddr(f->esp + 4);
-      check_user_vaddr(f->esp + 8);
+      // check_user_vaddr(f->esp + 4);
+      // check_user_vaddr(f->esp + 8);
+      valid_string(f->esp + 4);
       f->eax = create((const char *)*(uint32_t *)(f->esp + 4), (unsigned)*(uint32_t *)(f->esp + 8));
       break;
     case SYS_REMOVE:
-      check_user_vaddr(f->esp + 4);
+      // check_user_vaddr(f->esp + 4);
+      valid_string(f->esp + 4);
       f->eax = remove((const char*)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_OPEN:
-      check_user_vaddr(f->esp + 4);
-      valid_string((void *)(f->esp+4),f->esp);
+      // check_user_vaddr(f->esp + 4);
+      valid_string(f->esp+4);
       f->eax = open((const char*)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_FILESIZE:
@@ -99,11 +107,11 @@ syscall_handler (struct intr_frame *f UNUSED)
       // check_user_vaddr(f->esp + 4);
       // check_user_vaddr(f->esp + 8);
       // check_user_vaddr(f->esp + 12);
-      valid_buffer((void*)(f->esp + 8),(unsigned)(f->esp + 12),f->esp,true);
+      valid_buffer(f->esp + 8,f->esp + 12,f->esp,true);
       f->eax = read((int)*(uint32_t *)(f->esp+4), (void *)*(uint32_t *)(f->esp + 8), (unsigned)*((uint32_t *)(f->esp + 12)));
       break;
     case SYS_WRITE:
-      valid_string((void *)(f->esp + 8),f->esp);
+      valid_string(f->esp + 8);
       f->eax = write((int)*(uint32_t *)(f->esp+4), (void *)*(uint32_t *)(f->esp + 8), (unsigned)*((uint32_t *)(f->esp + 12)));
       break;
     case SYS_SEEK:

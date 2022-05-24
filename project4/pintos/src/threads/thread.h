@@ -95,7 +95,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct hash vm;
+ 
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -112,6 +112,7 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+    struct hash vm;
   };
 
 /* If false (default), use round-robin scheduler.

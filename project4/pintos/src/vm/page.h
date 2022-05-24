@@ -22,11 +22,14 @@ struct vm_entry {
 
     size_t swap_segment;
     struct hash_elem elem;
-}
+};
 
 void vm_init (struct hash *vm);
-static unsigned vm_hash_func(const struct hash_elem *elem void *aux);
-static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux );
+static unsigned vm_hash_func(const struct hash_elem *elem, void *aux UNUSED);
+static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED);
+static void destroy_vm_func(struct hash_elem *e, void *aux UNUSED);
 bool insert_vm_entry(struct hash *vm, struct vm_entry *insert_entry);
 bool delete_vm_entry(struct hash *vm, struct vm_entry *delete_entry);
 struct vm_entry *find_vm_entry(void *virtual_address);
+void destroy_vm_entry(struct hash *vm);
+

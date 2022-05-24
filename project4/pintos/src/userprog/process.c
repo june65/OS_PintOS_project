@@ -486,13 +486,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
-  uint8_t *kpage;
+  uint8_t *kpage =((uint8_t *) PHYS_BASE) - PGSIZE;
+  void *upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
   bool success = false;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+      success = install_page (upage, kpage, true);
       if (success)
         *esp = PHYS_BASE;
       else
@@ -501,7 +501,7 @@ setup_stack (void **esp)
   if(success) {
     struct vm_entry *v = malloc(sizeof(struct vm_entry));
     v->type = VM_ANON;
-    v->virtual_address = ((uint8_t *) PHYS_BASE) - PGSIZE;
+    v->virtual_address = upage;
     v->valid_write = true;
     v->is_load = true;
 
@@ -600,9 +600,13 @@ void construct_esp(char *file_name, void **esp) {
 }
 
 bool handle_mm_fault (struct vm_entry *v) {
-  void *kaddr;
+  uint8_t *kaddr;
   bool is_load;
   kaddr = palloc_get_page(PAL_USER);
+
+  if(kaddr == NULL) {
+    return false;
+  }
 
   switch (v->type) {
     case VM_BIN:
@@ -614,6 +618,8 @@ bool handle_mm_fault (struct vm_entry *v) {
       break;
     case VM_FILE:
       break;
+    case VM_ANON:
+      break;
   }
 
   if(!install_page(v->virtual_address,kaddr,v->valid_write)) {
@@ -621,13 +627,12 @@ bool handle_mm_fault (struct vm_entry *v) {
     return false;
   }
   v->is_load = true;
-  return true;
+  return is_load;
 }
 
 bool load_file(void *kaddr, struct vm_entry *v) {
   file_seek(v->f,v->offset);
   if(file_read(v->f,kaddr,v->read_bytes) != (int)v->read_bytes) {
-    palloc_free_page(kaddr);
     return false;
   }
   memset(kaddr + v->read_bytes, 0, v->fill_page_zero);
