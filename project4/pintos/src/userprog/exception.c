@@ -157,7 +157,7 @@ page_fault (struct intr_frame *f)
 //    }
 //   }
 
-   if (not_present) {
+   if (!user || is_kernel_vaddr(fault_addr) || not_present) {
       struct vm_entry *v = find_vm_entry(fault_addr);
       if(v == NULL || !handle_mm_fault(v)) {
          exit(-1);

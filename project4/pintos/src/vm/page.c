@@ -1,7 +1,7 @@
 #include "vm/page.h"
 
 void vm_init (struct hash *vm) {
-    hash_init(vm, vm_hash_func, vm_less_funcm, NULL);
+    hash_init(vm, vm_hash_func, vm_less_func, NULL);
 }
 
 static unsigned vm_hash_func(const struct hash_elem *e, void *aux UNUSED) {

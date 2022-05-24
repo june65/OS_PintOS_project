@@ -41,7 +41,7 @@ void valid_string(const void *str) {
   void *p = pg_round_down(str);
   struct vm_entry *v = check_user_vaddr(str);
   int str_len = 0;
-  while(((char *)str)[size] != '\0') {
+  while(((char *)str)[str_len] != '\0') {
     str_len++;
   }
 

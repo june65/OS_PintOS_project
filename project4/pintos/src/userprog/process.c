@@ -24,6 +24,7 @@ void parse_filename(char *src, char *dest);
 void construct_esp(char *file_name, void **esp);
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 bool handle_mm_fault (struct vm_entry *v);
+bool load_file(void *kaddr, struct vm_entry *v);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
