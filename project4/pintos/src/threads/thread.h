@@ -4,9 +4,10 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include <hash.h>
-#include <stdlib.h>
-#include "threads/synch.h"
+
+#ifdef VM
+#include "vm/page.h"
+#endif
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -95,24 +96,37 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
- 
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-    struct semaphore child_lock;
-    struct semaphore mem_lock;
-    struct semaphore load_lock;
-    struct thread* parent;
-    struct list child;
-    struct list_elem child_elem;
-    int exit_status;
-    struct file* fd[200];
+
+    // Project 2: file descriptors and process table
+    /* Owned by userprog/process.c and userprog/syscall.c */
+
+    struct process_control_block *pcb;  /* Process Control Block */
+    struct list child_list;             /* List of children processes of this thread,
+                                          each elem is defined by pcb#elem */
+
+    struct list file_descriptors;       /* List of file_descriptors the thread contains */
+
+    struct file *executing_file;        /* The executable file of associated process. */
+
+    uint8_t *current_esp;               /* The current value of the user program’s stack pointer.
+                                           A page fault might occur in the kernel, so we might
+                                           need to store esp on transition to kernel mode. (4.3.3) */
+#endif
+
+#ifdef VM
+    // Project 3: Supplemental page table.
+    struct supplemental_page_table *supt;   /* Supplemental Page Table. */
+
+    // Project 3: Memory Mapped Files.
+    struct list mmap_list;              /* List of struct mmap_desc. */
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-    struct hash vm;
   };
 
 /* If false (default), use round-robin scheduler.

@@ -1,35 +1,62 @@
+#ifndef VM_PAGE_H
+#define VM_PAGE_H
+
+#include "vm/swap.h"
 #include <hash.h>
-#include <list.h>
-#include "threads/thread.h"
-#include "threads/vaddr.h"
+#include "filesys/off_t.h"
 
-#define VM_BIN  0   /* binary file data load */
-#define VM_FILE 1   /* mapped file data load */
-#define VM_ANON 2   /* swap file data load */
-
-struct vm_entry {
-    uint8_t type;   /* which type of vm */
-    void *virtual_address; /* vm_entry virtual page */
-    bool valid_write;
-    bool is_load;
-
-    struct list_elem mmap_elem;
-
-    struct file *f;
-    size_t offset;
-    size_t read_bytes;
-    size_t fill_page_zero;
-
-    size_t swap_segment;
-    struct hash_elem elem;
+enum page_status {
+  ALL_ZERO,         
+  ON_FRAME,        
+  ON_SWAP,        
+  FROM_FILESYS      
 };
 
-void vm_init (struct hash *vm);
-static unsigned vm_hash_func(const struct hash_elem *elem, void *aux UNUSED);
-static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED);
-static void destroy_vm_func(struct hash_elem *e, void *aux UNUSED);
-bool insert_vm_entry(struct hash *vm, struct vm_entry *insert_entry);
-bool delete_vm_entry(struct hash *vm, struct vm_entry *delete_entry);
-struct vm_entry *find_vm_entry(void *virtual_address);
-void destroy_vm_entry(struct hash *vm);
+struct page_table
+  {
+    struct hash page_map;
+  };
+
+struct page_entry
+  {
+    void *upage;              
+    void *kpage;            
+    struct hash_elem elem;
+
+    enum page_status status;
+
+    bool dirty;           
+
+    swap_index_t swap_index;  
+    struct file *file;
+    off_t file_offset;
+    uint32_t read_bytes, zero_bytes;
+    bool writable;
+  };
+
+
+
+struct page_table*supplemental_create (void);
+void supplemental_destroy (struct page_table *);
+
+bool supplemental_install_frame (struct page_table *supt, void *upage, void *kpage);
+bool supplemental_install_zeropage (struct page_table *supt, void *);
+bool supplemental_set_swap (struct page_table *supt, void *, swap_index_t);
+bool supplemental_install_filesys (struct page_table *supt, void *page,
+    struct file * file, off_t offset, uint32_t read_bytes, uint32_t zero_bytes, bool writable);
+
+struct page_entry* supplemental_lookup (struct page_table *supt, void *);
+bool supplemental_has_entry (struct page_table *, void *page);
+
+bool supplemental_set_dirty (struct page_table *supt, void *, bool);
+
+bool vm_load_page(struct page_table *supt, uint32_t *pagedir, void *upage);
+
+bool supplemental_mm_unmap(struct page_table *supt, uint32_t *pagedir,
+    void *page, struct file *f, off_t offset, size_t bytes);
+
+void vm_pin_page(struct page_table *supt, void *page);
+void vm_unpin_page(struct page_table *supt, void *page);
+
+#endif
 
